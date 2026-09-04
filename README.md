@@ -1,7 +1,7 @@
 # Gleason Grade Group Mapper
 
-> **Domain:** Digital Pathology & Quantitative Histopathology  
-> **Reference Guidelines & Standards:** `College of American Pathologists (CAP) Synoptic Protocols & DICOM WSI`
+> **Domain:** Digital Pathology & Quantitative Histopathology
+> **Reference Guidelines & Standards:** College of American Pathologists (CAP) Synoptic Protocols & DICOM WSI
 
 <div align="center">
 
@@ -28,7 +28,6 @@ References:
   - NCCN Clinical Practice Guidelines in Oncology: Prostate Cancer (v4.2024)
   - Pierorazio PM et al. Eur Urol. 2013;63(1):116-122
 
-Zero-dependency Python implementation (stdlib only).
 License: MIT
 
 ---
@@ -53,6 +52,7 @@ Returns
 -------
 dict with gleason_score, grade_group, grade_group_label, risk_category,
 description, prognosis
+
 - **`nccn_risk_stratification()`**: NCCN risk stratification for prostate cancer.
 
 Parameters
@@ -73,11 +73,11 @@ max_percent_per_core : float, optional
 Returns
 -------
 dict with risk_group, risk_category, criteria_met, treatment_options
+
 - **`process_batch()`**: Process a CSV of prostate cancer cases.
 
 Expected columns: primary_pattern, secondary_pattern, psa, t_stage
 Optional: tertiary_pattern, num_positive_cores, total_cores, max_percent_per_core
-- **`main()`** — calculates and validates main parameters.
 
 ---
 
@@ -85,49 +85,104 @@ Optional: tertiary_pattern, num_positive_cores, total_cores, max_percent_per_cor
 
 ```text
   gleason_score = primary_pattern + secondary_pattern
-  risk = "Low risk"
-  risk = "Favorable intermediate risk"
-  risk = "Unfavorable intermediate risk"
-  risk = "High risk"
+  grade_group = f(gleason_score, primary_pattern, secondary_pattern)
+  risk = nccn_risk_stratification(grade_group, psa, t_stage, ...)
 ```
 
 ---
 
 ## 💻 CLI Quickstart & Usage
 
-### 1. Guided Interactive Mode
+### Installation
+
 ```bash
-python cli.py
+pip install -r requirements.txt
 ```
 
-### 2. Direct Parameterized Evaluation
+### 1. Grade Group Mapping
 ```bash
-python cli.py --input data.csv
+python cli.py grade --primary 3 --secondary 4
 ```
 
-### Parameter Reference
-- `--interactive`: Launch guided terminal interactive wizard.
-- `--input <path>`: Evaluate input from JSON or CSV specification.
-- `--json`: Output deterministic structured results in JSON format.
+### 2. NCCN Risk Stratification
+```bash
+python cli.py risk --grade-group 2 --psa 15.0 --t-stage T2b
+```
 
-### Input Data Schema
+### 3. Full Assessment (Grade + Risk)
+```bash
+python cli.py assess --primary 4 --secondary 3 --psa 15.0 --t-stage T2b
+```
+
+### 4. Batch Processing
+```bash
+python cli.py batch -i sample.csv -o results.csv
+```
+
+### 5. Enterprise Supervisor (Audit)
+```bash
+python cli.py audit --task-id TASK-001 --primary-metric 12.0
+```
+
+### 6. Supervisory Chat
+```bash
+python cli.py chat "Explain the ISUP Grade Group system"
+```
+
+### 7. Verify Audit Trail
+```bash
+python cli.py verify-audit
+```
+
+### 8. Start REST Server
+```bash
+python cli.py serve --host 0.0.0.0 --port 8000
+```
+
+### Command Reference
+- `grade`: Map Gleason patterns to Grade Group
+- `risk`: NCCN risk stratification
+- `assess`: Full grade + risk assessment
+- `batch`: Batch process CSV file
+- `audit`: Dispatch task to enterprise supervisor
+- `chat`: Enterprise supervisory chat
+- `verify-audit`: Verify HMAC audit trail integrity
+- `serve`: Start FastAPI REST server
+
+### Input Data Schema (for batch processing)
 
 | Field | Description | Requirement |
 |:------|:------------|:------------|
-| `Patient_ID` | Parameter / observation metric | Required |
-| `v1` | Parameter / observation metric | Required |
-| `v2` | Parameter / observation metric | Required |
-| `v3` | Parameter / observation metric | Required |
+| `primary_pattern` | Primary Gleason pattern (1-5) | Required |
+| `secondary_pattern` | Secondary Gleason pattern (1-5) | Required |
+| `psa` | PSA level in ng/mL | Required |
+| `t_stage` | Clinical T stage (e.g., T1c, T2a, T3a) | Required |
+| `tertiary_pattern` | Tertiary pattern if present | Optional |
+| `num_positive_cores` | Number of positive biopsy cores | Optional |
+| `total_cores` | Total cores taken | Optional |
+| `max_percent_per_core` | Max % cancer in any core (0-100) | Optional |
 
 ---
 
 ## 🛡️ Security & Enterprise Architecture
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
 * **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
 * **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+
+### Security Configuration
+
+Set the `AUDIT_SECRET_KEY` environment variable for persistent audit trail integrity:
+
+```bash
+# Linux/macOS
+export AUDIT_SECRET_KEY="your-secure-random-key"
+
+# Windows
+set AUDIT_SECRET_KEY=your-secure-random-key
+```
+
+If not set, an ephemeral random key is used (audit trail won't persist across restarts).
 
 ---
 
@@ -139,10 +194,10 @@ Run the automated test suite:
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
+Execute the enterprise simulation:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+python simulator.py 100
 ```
 
 ---
@@ -151,5 +206,45 @@ python simulator.py --tasks 1000 --concurrency 8
 
 ```bash
 docker build -t gleason-grade-group-mapper .
-docker run -p 8000:8000 gleason-grade-group-mapper
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret-key gleason-grade-group-mapper
+```
+
+Or using Docker Compose:
+
+```bash
+AUDIT_SECRET_KEY=your-secret-key docker-compose up -d
+```
+
+---
+
+## 📁 Project Structure
+
+```
+gleason-grade-group-mapper/
+├── gleason_mapper.py      # Core logic: grade group mapping, NCCN risk, CLI
+├── cli.py                 # CLI entry point
+├── enrichment.py          # Enrichment engines (longitudinal tracking, etc.)
+├── simulator.py           # Enterprise simulation/testing
+├── agents/                # Enterprise agent framework
+│   ├── __init__.py
+│   ├── api.py            # FastAPI REST server
+│   ├── base.py           # Security, PHI guard, HMAC audit trail
+│   ├── models.py         # Pydantic schemas
+│   ├── supervisor.py     # Supervisor orchestrator
+│   ├── workers.py        # Specialized domain workers
+│   ├── llm_factory.py    # LLM provider factory
+│   ├── learning.py       # Bayesian calibration engine
+│   ├── metrics.py        # Prometheus metrics collector
+│   └── streamer.py       # WebSocket telemetry streamer
+├── tests/                 # Test suites
+│   ├── test_gleason_grade_group_mapper.py
+│   └── test_enrichment.py
+├── test_gleason_mapper.py # Core gleason mapper tests
+├── web/
+│   └── index.html        # Operations console UI
+├── requirements.txt       # Python dependencies
+├── Dockerfile
+├── docker-compose.yml
+├── sample.csv             # Sample input data
+└── openapi_spec.json      # OpenAPI specification
 ```
