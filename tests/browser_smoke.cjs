@@ -18,6 +18,7 @@ assert.equal(context.risk(2, 6, "T1c", null, null, null, null), "Intermediate Ri
 assert.equal(context.risk(2, 12, "T1c", 2, 12, null, null), "Unfavorable Intermediate Risk");
 assert.equal(context.risk(5, 30, "T3b", null, null, null, null), "Very High Risk");
 assert.equal(context.risk(1, 6, "T3b", null, null, null, null), "High Risk");
+assert.equal(context.risk(4, 40, "T2a", null, null, null, null), "Very High Risk");
 assert.throws(() => context.risk(1, -1, "T1c", null, null, null, null));
 assert.equal(context.parseCSV('a,b\n"x,y",z\n').length, 2);
 assert.match(context.csvCell("=1+1"), /^"'/);
