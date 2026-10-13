@@ -60,6 +60,7 @@ def test_very_high_requires_multiple_features():
     assert nccn_risk_stratification(1, 6, "T3b")["risk_group"] == "High Risk"
     assert nccn_risk_stratification(5, 30, "T3b")["risk_group"] == "Very High Risk"
     assert nccn_risk_stratification(2, 45, "T2a")["risk_group"] == "High Risk"
+    assert nccn_risk_stratification(4, 40, "T2a")["risk_group"] == "Very High Risk"
 
 
 def test_psa_boundary_and_very_low_density():
