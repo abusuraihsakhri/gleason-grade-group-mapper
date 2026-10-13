@@ -124,7 +124,7 @@ function risk(group,psa,stage,positive,total,maxpct,density){
   const hgrade=group>=4;
   const factors=Number(["T2B","T2C"].includes(t))+Number(group===2||group===3)+Number(psa>=10&&psa<=20);
   const fraction=total===null?null:positive/total;
-  if(Number(advanced)+Number(hgrade)+Number(psa>40)>=2)return "Very High Risk";
+  if(Number(advanced)+Number(hgrade)+Number(psa>=40)>=2)return "Very High Risk";
   if(advanced||hgrade||psa>20)return "High Risk";
   if(factors>0){
     if(group===3||factors>=2||(fraction!==null&&fraction>=.5))return "Unfavorable Intermediate Risk";
