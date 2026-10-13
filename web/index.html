@@ -1,236 +1,247 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gleason Grade Group Mapper — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Gleason Grade Group Mapper</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17243b;background:#f5f7fa}
+*{box-sizing:border-box}
+body{margin:0;padding:1.3rem;line-height:1.5}
+main{max-width:1030px;margin:auto}
+header{margin-bottom:1.5rem}
+h1{font-size:clamp(1.55rem,3.5vw,2.2rem);line-height:1.2;margin:.4rem 0}
+h2{font-size:1.12rem;margin:0 0 .85rem}
+p{margin:.45rem 0}
+.muted,small{color:#475569}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.1rem}
+.card{background:white;border:1px solid #d7dfeb;border-radius:12px;padding:1.25rem;min-width:0}
+fieldset{border:0;margin:0;padding:0}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+label{font-size:.88rem;font-weight:600;display:block}
+input,select,button{font:inherit}
+input,select{width:100%;border:1px solid #98a8c0;border-radius:7px;min-height:42px;background:#fff;color:#101828;padding:.5rem;margin-top:.25rem}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+button{cursor:pointer;padding:.62rem 1.1rem;border:1px solid #174da5;border-radius:7px;color:white;background:#174da5;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{color:#174da5;background:white}
+.actions{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.output{padding:1rem;border-radius:8px;background:#eef5ff;border:1px solid #c4d6f4;min-height:110px}
+.output strong{font-size:1.15rem}
+.error{color:#8b1c1c;background:#fff1f1;border-color:#efb1b1}
+.note{font-size:.85rem;color:#475569;margin-top:.75rem}
+footer{padding:1rem 0;color:#475569;font-size:.83rem}
+kbd{background:#f1f5f9;border-radius:3px;padding:.05rem .3rem}
+a{color:#12468d}
+@media(max-width:750px){.grid{grid-template-columns:1fr}body{padding:.8rem}.card{padding:1rem}}
+@media(max-width:400px){.formgrid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Gleason Grade Group Mapper</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Gleason Grade Group Mapper Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "gleason-grade-group-mapper",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+<main>
+<header>
+<h1>Gleason Grade Group Mapper</h1>
+<p class="muted">ISUP Grade Groups and exploratory localized prostate-cancer risk grouping, calculated entirely in your browser.</p>
+<p class="note"><strong>Clinical scope:</strong> Enter pathologist-assigned patterns; this tool does not interpret images or replace pathology review. Risk results are not treatment recommendations. Do not use as a sole basis for clinical decisions.</p>
+</header>
+<div class="grid">
+<section class="card" aria-labelledby="input-heading">
+<h2 id="input-heading">Single-case assessment</h2>
+<form id="assessment">
+<div class="formgrid">
+<label>Primary Gleason pattern
+<select id="primary" required><option>3</option><option>4</option><option>5</option></select></label>
+<label>Secondary Gleason pattern
+<select id="secondary" required><option>3</option><option selected>4</option><option>5</option></select></label>
+<label>Additional higher pattern
+<select id="tertiary"><option value="">None</option><option>4</option><option>5</option></select></label>
+<label>Specimen type
+<select id="specimen"><option value="biopsy">Needle biopsy</option><option value="prostatectomy">Prostatectomy</option></select></label>
+<label>PSA (ng/mL)
+<input id="psa" type="number" min="0" step="any" value="6" required></label>
+<label>Clinical T stage
+<select id="stage"><option>T1a</option><option>T1b</option><option selected>T1c</option><option>T2a</option><option>T2b</option><option>T2c</option><option>T3a</option><option>T3b</option><option>T4</option></select></label>
+<label>Positive biopsy cores (optional)
+<input id="positive" type="number" min="0" step="1" placeholder="e.g. 2"></label>
+<label>Total biopsy cores (optional)
+<input id="total" type="number" min="1" step="1" placeholder="e.g. 12"></label>
+<label>Maximum cancer involvement per core (%) (optional)
+<input id="maxpct" type="number" min="0" max="100" step="any" placeholder="e.g. 30"></label>
+<label>PSA density (ng/mL/cm³) (optional)
+<input id="density" type="number" min="0" step="any" placeholder="e.g. 0.10"></label>
+</div>
+<div class="actions"><button type="submit">Calculate grade and risk</button><button class="secondary" type="reset">Reset</button></div>
+</form>
+</section>
+<section class="card" aria-labelledby="result-heading">
+<h2 id="result-heading">Assessment results</h2>
+<div class="output" id="result" role="status" aria-live="polite">Enter the histologic patterns and clinical parameters, then select Calculate.</div>
+<p class="note">Needle biopsies incorporate the highest additional pattern into the score. In prostatectomy specimens, a minor/tertiary pattern is reported separately pending review of its extent.</p>
+<p class="note">Favorable-intermediate subgroup assignment requires the positive-core fraction. A missing fraction is reported as undetermined rather than assumed favorable.</p>
+</section>
+<section class="card" aria-labelledby="batch-heading">
+<h2 id="batch-heading">Local CSV batch processing</h2>
+<p class="muted">Required columns: <code>primary_pattern</code>, <code>secondary_pattern</code>, <code>psa</code>, <code>t_stage</code>. Optional: <code>tertiary_pattern</code>, <code>specimen_type</code>, <code>num_positive_cores</code>, <code>total_cores</code>, <code>max_percent_per_core</code>, <code>psa_density</code>.</p>
+<label for="file">Choose CSV file (up to 5 MB)</label>
+<input type="file" id="file" accept=".csv,text/csv">
+<div class="actions"><button id="process" type="button">Process CSV</button><button id="download" class="secondary" disabled type="button">Download results</button></div>
+<p id="batch-status" role="status" aria-live="polite" class="note">No file processed.</p>
+</section>
+<section class="card" aria-labelledby="privacy-heading">
+<h2 id="privacy-heading">Method and limitations</h2>
+<p>Supported histologic scores are 3+3 through 5+5. Patterns 1 and 2 are not assigned in contemporary diagnostic practice.</p>
+<p>This risk classifier considers Grade Group, clinical T stage, PSA and available core data. Intermediate groups may be indeterminate without biopsy involvement data. The optional legacy very-low grouping also requires PSA density.</p>
+<p><strong>Privacy:</strong> Data are processed locally in this browser, with no external scripts, remote API calls, analytics, or server upload.</p>
+<p><a href="https://uroweb.org/guidelines/prostate-cancer/chapter/classification-and-staging-systems" target="_blank" rel="noopener noreferrer">EAU grading reference</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/7382533/" target="_blank" rel="noopener noreferrer">ISUP 2019 consensus</a></p>
+</section>
+</div>
+<footer>Research and educational use only. Confirm final histologic grade, clinical stage and risk category with contemporary multidisciplinary guidance.</footer>
+</main>
+<script>
+"use strict";
+function grade(primary,secondary,tertiary,specimen){
+  const patterns=[primary,secondary,tertiary].filter(x=>x!==null);
+  if(patterns.some(x=>!Number.isInteger(x)||x<3||x>5))throw Error("Gleason patterns must be 3, 4 or 5.");
+  if(specimen!=="biopsy"&&specimen!=="prostatectomy")throw Error("Invalid specimen type.");
+  const effective=specimen==="biopsy"&&tertiary!==null?Math.max(secondary,tertiary):secondary;
+  const lookup={"3+3":1,"3+4":2,"4+3":3,"3+5":4,"4+4":4,"5+3":4,"4+5":5,"5+4":5,"5+5":5};
+  const group=lookup[primary+"+"+effective];
+  const note=tertiary===null?"":(specimen==="prostatectomy"?
+    "Prostatectomy: assess minor/tertiary pattern extent separately; grade unchanged.":(tertiary>secondary?
+    "Higher additional pattern included in biopsy grade.":"Additional pattern does not increase biopsy score."));
+  return {score:primary+effective,group,note};
+}
+function risk(group,psa,stage,positive,total,maxpct,density){
+  if(!Number.isInteger(group)||group<1||group>5||!Number.isFinite(psa)||psa<0)throw Error("Invalid grade group or PSA.");
+  const t=String(stage).trim().toUpperCase().replace(/^C/,"");
+  if(!["T1A","T1B","T1C","T2A","T2B","T2C","T3A","T3B","T4"].includes(t))throw Error("Unsupported clinical T stage.");
+  if((positive===null)!==(total===null))throw Error("Provide both positive and total biopsy-core counts.");
+  if(total!==null&&(!Number.isInteger(total)||!Number.isInteger(positive)||total<=0||positive<0||positive>total))throw Error("Invalid biopsy-core counts.");
+  if(maxpct!==null&&(!Number.isFinite(maxpct)||maxpct<0||maxpct>100))throw Error("Core involvement must be 0–100%.");
+  if(density!==null&&(!Number.isFinite(density)||density<0))throw Error("PSA density cannot be negative.");
+  const advanced=["T3A","T3B","T4"].includes(t);
+  const hgrade=group>=4;
+  const factors=Number(["T2B","T2C"].includes(t))+Number(group===2||group===3)+Number(psa>=10&&psa<=20);
+  const fraction=total===null?null:positive/total;
+  if(Number(advanced)+Number(hgrade)+Number(psa>=40)>=2)return "Very High Risk";
+  if(advanced||hgrade||psa>20)return "High Risk";
+  if(factors>0){
+    if(group===3||factors>=2||(fraction!==null&&fraction>=.5))return "Unfavorable Intermediate Risk";
+    if(fraction===null)return "Intermediate Risk (subgroup undetermined)";
+    return "Favorable Intermediate Risk";
+  }
+  if(group===1&&psa<10&&["T1A","T1B","T1C","T2A"].includes(t)){
+    if(t==="T1C"&&positive!==null&&positive<3&&maxpct!==null&&maxpct<=50&&density!==null&&density<.15)return "Very Low Risk";
+    return "Low Risk";
+  }
+  throw Error("These inputs cannot be assigned a localized risk group.");
+}
+function numberOrNull(value,label){
+  if(value===undefined||value===null||String(value).trim()==="")return null;
+  const num=Number(value);
+  if(!Number.isFinite(num))throw Error("Invalid "+label);
+  return num;
+}
+function assess(row){
+ const p=numberOrNull(row.primary_pattern,"primary"),s=numberOrNull(row.secondary_pattern,"secondary");
+ const t=numberOrNull(row.tertiary_pattern,"additional pattern");
+ const g=grade(p,s,t,row.specimen_type||"biopsy");
+ const ps=numberOrNull(row.psa,"PSA");
+ const category=risk(g.group,ps,row.t_stage,numberOrNull(row.num_positive_cores,"positive cores"),
+   numberOrNull(row.total_cores,"total cores"),numberOrNull(row.max_percent_per_core,"max core percentage"),
+   numberOrNull(row.psa_density,"PSA density"));
+ return {gleason_score:g.score,grade_group:g.group,risk_group:category,grade_note:g.note};
+}
+const byId=id=>document.getElementById(id);
+byId("assessment").addEventListener("submit",event=>{
+ event.preventDefault();
+ const row={
+  primary_pattern:byId("primary").value, secondary_pattern:byId("secondary").value,
+  tertiary_pattern:byId("tertiary").value, specimen_type:byId("specimen").value,
+  psa:byId("psa").value, t_stage:byId("stage").value,
+  num_positive_cores:byId("positive").value,total_cores:byId("total").value,
+  max_percent_per_core:byId("maxpct").value,psa_density:byId("density").value
+ };
+ const output=byId("result");output.replaceChildren();output.classList.remove("error");
+ try{
+  const r=assess(row);
+  const head=document.createElement("strong");head.textContent="Gleason "+r.gleason_score+" · Grade Group "+r.grade_group;
+  const p=document.createElement("p");p.textContent="Exploratory risk category: "+r.risk_group;
+  output.append(head,p);
+  if(r.grade_note){const n=document.createElement("p");n.textContent=r.grade_note;output.append(n);}
+ }catch(error){output.classList.add("error");output.textContent=error.message;}
+});
+byId("assessment").addEventListener("reset",()=>{
+ byId("result").classList.remove("error");
+ byId("result").textContent="Enter the histologic patterns and clinical parameters, then select Calculate.";
+});
+function parseCSV(text){
+ text=text.replace(/^\uFEFF/,"");
+ const records=[];let record=[],field="",quoted=false,closed=false;
+ for(let i=0;i<text.length;i++){
+  const ch=text[i];
+  if(quoted){
+   if(ch==='"'&&text[i+1]==='"'){field+='"';i++;}
+   else if(ch==='"'){quoted=false;closed=true;}
+   else{field+=ch;}
+  }else if(ch==='"'&&field===""&&!closed){quoted=true;}
+  else if(ch===","){record.push(field);field="";closed=false;}
+  else if(ch==="\n"||ch==="\r"){
+   if(ch==="\r"&&text[i+1]==="\n")i++;
+   record.push(field);if(record.some(v=>v!==""))records.push(record);
+   record=[];field="";closed=false;
+  }else{
+   if(closed&&!/\s/.test(ch))throw Error("Malformed quoted CSV field.");
+   field+=ch;
+  }
+ }
+ if(quoted)throw Error("Unterminated quoted CSV field.");
+ if(record.length||field!==""){record.push(field);records.push(record);}
+ return records;
+}
+function csvCell(value){
+ let text=String(value===null||value===undefined?"":value);
+ if(/^\s*[=+\-@]/.test(text))text="'"+text;
+ return '"'+text.replace(/"/g,'""')+'"';
+}
+let batchBlob=null;
+byId("process").addEventListener("click",async()=>{
+ byId("download").disabled=true;batchBlob=null;
+ const file=byId("file").files[0],status=byId("batch-status");
+ if(!file){status.textContent="Select a CSV file.";return;}
+ if(file.size>5*1024*1024){status.textContent="File exceeds the 5 MB limit.";return;}
+ try{
+  const records=parseCSV(await file.text());
+  if(records.length<2)throw Error("CSV has no data rows.");
+  const headers=records.shift().map(s=>s.trim());
+  const required=["primary_pattern","secondary_pattern","psa","t_stage"];
+  if(new Set(headers).size!==headers.length||required.some(h=>!headers.includes(h)))
+   throw Error("CSV requires unique headers and the four required columns.");
+  const extra=["gleason_score","grade_group","risk_group","grade_note"];
+  const outHeaders=[...new Set([...headers,...extra])];
+  const out=[outHeaders.map(csvCell).join(",")];
+  for(let i=0;i<records.length;i++){
+   const values=records[i];
+   if(values.length!==headers.length)throw Error("Row "+(i+2)+" has an incorrect field count.");
+   const row=Object.fromEntries(headers.map((h,j)=>[h,values[j]]));
+   if(required.some(h=>row[h].trim()===""))throw Error("Row "+(i+2)+" has missing required data.");
+   let result;
+   try{result=assess(row);}catch(error){throw Error("Row "+(i+2)+": "+error.message);}
+   out.push(outHeaders.map(h=>csvCell(Object.prototype.hasOwnProperty.call(result,h)?result[h]:row[h])).join(","));
+  }
+  batchBlob=new Blob([out.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"});
+  status.textContent=records.length+" rows processed locally. Download is ready.";
+  byId("download").disabled=false;
+ }catch(error){status.textContent="Error: "+error.message;}
+});
+byId("download").addEventListener("click",()=>{
+ if(!batchBlob)return;
+ const url=URL.createObjectURL(batchBlob);
+ const anchor=document.createElement("a");anchor.href=url;anchor.download="gleason-results.csv";
+ document.body.append(anchor);anchor.click();anchor.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+</script>
 </body>
 </html>

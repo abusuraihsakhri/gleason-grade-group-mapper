@@ -68,11 +68,11 @@ class TestGradeGroupMapping:
         assert "note" in result
 
     def test_invalid_pattern_zero(self):
-        with pytest.raises(ValueError, match="must be integer 1-5"):
+        with pytest.raises(ValueError, match="integer Gleason pattern 3-5"):
             map_gleason_to_grade_group(0, 3)
 
     def test_invalid_pattern_six(self):
-        with pytest.raises(ValueError, match="must be integer 1-5"):
+        with pytest.raises(ValueError, match="integer Gleason pattern 3-5"):
             map_gleason_to_grade_group(3, 6)
 
 
@@ -85,7 +85,7 @@ class TestNCCNRiskStratification:
     def test_very_low_risk(self):
         result = nccn_risk_stratification(
             grade_group=1, psa=5.0, t_stage="T1c",
-            num_positive_cores=2, total_cores=12, max_percent_per_core=30.0
+            num_positive_cores=2, total_cores=12, max_percent_per_core=30.0, psa_density=0.10
         )
         assert result["risk_group"] == "Very Low Risk"
 
@@ -125,7 +125,7 @@ class TestNCCNRiskStratification:
             nccn_risk_stratification(grade_group=0, psa=5.0, t_stage="T1c")
 
     def test_invalid_psa(self):
-        with pytest.raises(ValueError, match="psa must be >= 0"):
+        with pytest.raises(ValueError, match="psa must be a finite number >= 0"):
             nccn_risk_stratification(grade_group=1, psa=-1.0, t_stage="T1c")
 
 

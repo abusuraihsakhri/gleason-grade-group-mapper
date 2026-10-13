@@ -1,250 +1,69 @@
 # Gleason Grade Group Mapper
 
-> **Domain:** Digital Pathology & Quantitative Histopathology
-> **Reference Guidelines & Standards:** College of American Pathologists (CAP) Synoptic Protocols & DICOM WSI
+A Python CLI and browser calculator for mapping pathologist-assigned prostate Gleason patterns to ISUP Grade Groups (1–5) and exploring localized prostate-cancer risk categories using PSA, clinical T stage and biopsy-core data.
 
-<div align="center">
+**Clinical limitation:** This is an educational/research implementation, not a validated medical device or a substitute for pathology reporting, current clinical guidelines or multidisciplinary decisions. Histologic Grade Group by itself does **not** establish clinical risk. Risk categories may require data not present in the inputs. In particular, intermediate-risk subgroup classification is shown as *undetermined* without the positive-core fraction.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+## Features
 
-</div>
+- Grade Groups for contemporary Gleason patterns 3–5, distinguishing 3+4 from 4+3.
+- Higher third pattern in **needle biopsy** (included in the score) versus **prostatectomy** (retained separately for specialist review).
+- Exploratory localized risk grouping by Grade Group, PSA, T stage and optional core fraction/PSA density.
+- Browser single-case calculator and local CSV import/export in **web/index.html**.
+- Python CLI for grade/risk assessment and CSV processing.
+- Separate experimental supervisor/audit API in **agents/** and backend console in **web/operations.html**. Neither interprets images or grades histology.
 
----
+The optional *Very Low Risk* label reflects a legacy category and requires PSA density and core criteria; newer guidelines may group such cases differently. The grade-only result's **risk_category** field is retained for backward compatibility and is not a comprehensive risk category. Use the risk assessment function with clinical parameters for an exploratory estimate.
 
-## 📖 What It Does
+## Browser use
 
-Gleason Grade Group & NCCN Risk Stratification Mapper
+Open **web/index.html** locally in a modern browser. Select the patterns and specimen type, enter clinical parameters, then select **Calculate grade and risk**. For batch use, choose a CSV with the required columns:
 
-Implements the ISUP 2014 Grade Group system for prostate cancer and
-NCCN risk stratification for treatment planning.
+    primary_pattern,secondary_pattern,psa,t_stage
 
-References:
-  - Epstein JI et al. Am J Surg Pathol. 2016;40(2):244-252 (ISUP 2014)
-  - NCCN Clinical Practice Guidelines in Oncology: Prostate Cancer (v4.2024)
-  - Pierorazio PM et al. Eur Urol. 2013;63(1):116-122
+Optional columns: tertiary_pattern, specimen_type, num_positive_cores, total_cores, max_percent_per_core, psa_density.
 
-License: MIT
+The web application has no external scripts or API calls. Input files and calculations remain in the browser until you explicitly download the CSV. It needs no Python server or Pyodide. GitHub Actions includes a Pages publishing workflow; a public live URL is not claimed until deployment is verified.
 
----
+## Python usage
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+Python 3.10–3.12 is tested in CI.
 
-### 🔬 Analytical Functions
-
-- **`map_gleason_to_grade_group()`**: Map Gleason patterns to ISUP 2014 Grade Group.
-
-Parameters
-----------
-primary_pattern : int
-    Primary (most prevalent) Gleason pattern (1-5).
-secondary_pattern : int
-    Secondary (second most prevalent) Gleason pattern (1-5).
-tertiary_pattern : int, optional
-    Tertiary (highest) pattern if present. If provided and higher than
-    secondary, the score uses primary + tertiary for grade group.
-
-Returns
--------
-dict with gleason_score, grade_group, grade_group_label, risk_category,
-description, prognosis
-
-- **`nccn_risk_stratification()`**: NCCN risk stratification for prostate cancer.
-
-Parameters
-----------
-grade_group : int
-    ISUP Grade Group (1-5).
-psa : float
-    PSA level in ng/mL.
-t_stage : str
-    Clinical T stage (e.g., 'T1c', 'T2a', 'T2b', 'T2c', 'T3a', 'T3b', 'T4').
-num_positive_cores : int, optional
-    Number of biopsy cores positive for cancer.
-total_cores : int, optional
-    Total number of cores taken.
-max_percent_per_core : float, optional
-    Maximum percentage of cancer in any single core (0-100).
-
-Returns
--------
-dict with risk_group, risk_category, criteria_met, treatment_options
-
-- **`process_batch()`**: Process a CSV of prostate cancer cases.
-
-Expected columns: primary_pattern, secondary_pattern, psa, t_stage
-Optional: tertiary_pattern, num_positive_cores, total_cores, max_percent_per_core
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  gleason_score = primary_pattern + secondary_pattern
-  grade_group = f(gleason_score, primary_pattern, secondary_pattern)
-  risk = nccn_risk_stratification(grade_group, psa, t_stage, ...)
-```
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-### 1. Grade Group Mapping
-```bash
+~~~bash
+python -m pip install -r requirements.txt
 python cli.py grade --primary 3 --secondary 4
-```
-
-### 2. NCCN Risk Stratification
-```bash
-python cli.py risk --grade-group 2 --psa 15.0 --t-stage T2b
-```
-
-### 3. Full Assessment (Grade + Risk)
-```bash
-python cli.py assess --primary 4 --secondary 3 --psa 15.0 --t-stage T2b
-```
-
-### 4. Batch Processing
-```bash
+python cli.py grade --primary 3 --secondary 4 --tertiary 5 --specimen-type biopsy
+python cli.py risk --grade-group 2 --psa 8 --t-stage T1c --positive-cores 2 --total-cores 12
+python cli.py assess --primary 4 --secondary 3 --psa 15 --t-stage T2b
 python cli.py batch -i sample.csv -o results.csv
-```
+python -m pytest -q
+node tests/browser_smoke.cjs
+~~~
 
-### 5. Enterprise Supervisor (Audit)
-```bash
-python cli.py audit --task-id TASK-001 --primary-metric 12.0
-```
+The browser and Python calculators use corresponding rules. Python batch processing rejects missing headers, invalid rows and inconsistent biopsy counts rather than assuming clinical values. CSV exports escape spreadsheet-formula-like content.
 
-### 6. Supervisory Chat
-```bash
-python cli.py chat "Explain the ISUP Grade Group system"
-```
+## Optional backend audit console
 
-### 7. Verify Audit Trail
-```bash
-python cli.py verify-audit
-```
+The **agents/** package provides a separate, generic demonstration of threshold checking and signed audit records, not Gleason scoring.
 
-### 8. Start REST Server
-```bash
-python cli.py serve --host 0.0.0.0 --port 8000
-```
+~~~bash
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+python cli.py serve --host 127.0.0.1 --port 8000
+~~~
 
-### Command Reference
-- `grade`: Map Gleason patterns to Grade Group
-- `risk`: NCCN risk stratification
-- `assess`: Full grade + risk assessment
-- `batch`: Batch process CSV file
-- `audit`: Dispatch task to enterprise supervisor
-- `chat`: Enterprise supervisory chat
-- `verify-audit`: Verify HMAC audit trail integrity
-- `serve`: Start FastAPI REST server
+Visit **http://127.0.0.1:8000/docs** for the generated API schema. **web/operations.html** requires a running compatible API at the same origin; GitHub Pages cannot host FastAPI.
 
-### Input Data Schema (for batch processing)
+The HMAC-SHA256 audit chain is in memory, not durable storage. Without a configured key, an ephemeral key is generated. The regex-based identifier screen catches selected common formats but does not establish de-identification or HIPAA compliance. Do not submit identifiable clinical records to the demo API. Its chat is a mock, not a medical reasoning service.
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `primary_pattern` | Primary Gleason pattern (1-5) | Required |
-| `secondary_pattern` | Secondary Gleason pattern (1-5) | Required |
-| `psa` | PSA level in ng/mL | Required |
-| `t_stage` | Clinical T stage (e.g., T1c, T2a, T3a) | Required |
-| `tertiary_pattern` | Tertiary pattern if present | Optional |
-| `num_positive_cores` | Number of positive biopsy cores | Optional |
-| `total_cores` | Total cores taken | Optional |
-| `max_percent_per_core` | Max % cancer in any core (0-100) | Optional |
+## Methods and references
 
----
+- [ISUP 2019 consensus grading](https://pmc.ncbi.nlm.nih.gov/articles/PMC7382533/)
+- [EAU classification and staging](https://uroweb.org/guidelines/prostate-cancer/chapter/classification-and-staging-systems)
 
-## 🛡️ Security & Enterprise Architecture
+Risk stratification is an **approximate implementation** for localized disease: independently verify definitions, thresholds and treatment decisions against the guideline edition used. The legacy Python treatment-option strings are illustrative, not patient-specific recommendations.
 
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+## Technology and license
 
-### Security Configuration
+Python standard library for core grading/CSV, FastAPI/Pydantic/Uvicorn for optional audit API, Pytest for testing, and plain HTML/CSS/JavaScript for the browser UI. Intended for current Chrome, Firefox, Safari and Edge; automated JavaScript tests run in Node, not a cross-browser lab.
 
-Set the `AUDIT_SECRET_KEY` environment variable for persistent audit trail integrity:
-
-```bash
-# Linux/macOS
-export AUDIT_SECRET_KEY="your-secure-random-key"
-
-# Windows
-set AUDIT_SECRET_KEY=your-secure-random-key
-```
-
-If not set, an ephemeral random key is used (audit trail won't persist across restarts).
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
-
-```bash
-pytest -v
-```
-
-Execute the enterprise simulation:
-
-```bash
-python simulator.py 100
-```
-
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t gleason-grade-group-mapper .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret-key gleason-grade-group-mapper
-```
-
-Or using Docker Compose:
-
-```bash
-AUDIT_SECRET_KEY=your-secret-key docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-gleason-grade-group-mapper/
-├── gleason_mapper.py      # Core logic: grade group mapping, NCCN risk, CLI
-├── cli.py                 # CLI entry point
-├── enrichment.py          # Enrichment engines (longitudinal tracking, etc.)
-├── simulator.py           # Enterprise simulation/testing
-├── agents/                # Enterprise agent framework
-│   ├── __init__.py
-│   ├── api.py            # FastAPI REST server
-│   ├── base.py           # Security, PHI guard, HMAC audit trail
-│   ├── models.py         # Pydantic schemas
-│   ├── supervisor.py     # Supervisor orchestrator
-│   ├── workers.py        # Specialized domain workers
-│   ├── llm_factory.py    # LLM provider factory
-│   ├── learning.py       # Bayesian calibration engine
-│   ├── metrics.py        # Prometheus metrics collector
-│   └── streamer.py       # WebSocket telemetry streamer
-├── tests/                 # Test suites
-│   ├── test_gleason_grade_group_mapper.py
-│   └── test_enrichment.py
-├── test_gleason_mapper.py # Core gleason mapper tests
-├── web/
-│   └── index.html        # Operations console UI
-├── requirements.txt       # Python dependencies
-├── Dockerfile
-├── docker-compose.yml
-├── sample.csv             # Sample input data
-└── openapi_spec.json      # OpenAPI specification
-```
+[MIT License](LICENSE).
