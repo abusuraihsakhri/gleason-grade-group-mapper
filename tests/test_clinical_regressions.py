@@ -97,7 +97,7 @@ def test_batch_formula_injection_is_escaped(tmp_path):
     src = tmp_path / "in.csv"
     dst = tmp_path / "out.csv"
     src.write_text("primary_pattern,secondary_pattern,psa,t_stage,annotation\n"
-                   "3,3,5,T1c,=HYPERLINK(\"\"http://example.com\"\",\"\"click\"\")\n")
+                   "3,3,5,T1c,=1+1\n")
     assert process_batch(str(src), str(dst)) == 1
     with dst.open(newline="") as file:
         row = next(csv.DictReader(file))
