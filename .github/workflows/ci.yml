@@ -39,6 +39,30 @@ jobs:
     - name: Validate FastAPI schema
       run: python -c "from agents.api import app; assert app.openapi()['paths']['/api/audit']"
 
+    - name: HTTP smoke test (browser UI, audit API)
+      run: |
+        python cli.py serve --host 127.0.0.1 --port 8000 > /tmp/gleason-api.log 2>&1 &
+        server_pid=$!
+        trap 'kill $server_pid 2>/dev/null || true' EXIT
+        for attempt in $(seq 1 30); do
+          if curl --silent --fail http://127.0.0.1:8000/health >/dev/null; then break; fi
+          sleep 1
+        done
+        python - <<'PY'
+        import json
+        from urllib.request import Request, urlopen
+        with urlopen("http://127.0.0.1:8000/") as response:
+            assert "Gleason Grade Group Mapper" in response.read().decode()
+        with urlopen("http://127.0.0.1:8000/operations") as response:
+            assert "Backend Operations" in response.read().decode()
+        payload = {"task_id": "SMOKE-01", "target_identifier": "SPECIMEN-01", "primary_metric": 7.0}
+        request = Request("http://127.0.0.1:8000/api/audit",
+                          data=json.dumps(payload).encode(), method="POST",
+                          headers={"Content-Type": "application/json"})
+        with urlopen(request) as response:
+            assert json.load(response)["task_id"] == "SMOKE-01"
+        PY
+
     - name: Run Pytest Suite
       run: |
         pytest -v
