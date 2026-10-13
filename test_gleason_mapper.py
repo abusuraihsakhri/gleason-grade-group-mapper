@@ -85,7 +85,7 @@ class TestNCCNRiskStratification:
     def test_very_low_risk(self):
         result = nccn_risk_stratification(
             grade_group=1, psa=5.0, t_stage="T1c",
-            num_positive_cores=2, total_cores=12, max_percent_per_core=30.0
+            num_positive_cores=2, total_cores=12, max_percent_per_core=30.0, psa_density=0.10
         )
         assert result["risk_group"] == "Very Low Risk"
 
