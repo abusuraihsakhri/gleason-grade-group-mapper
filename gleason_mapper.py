@@ -17,6 +17,7 @@ License: MIT
 import argparse
 import csv
 import json
+import math
 from typing import Dict, Any, Optional, List
 
 
@@ -25,242 +26,151 @@ from typing import Dict, Any, Optional, List
 # ---------------------------------------------------------------------------
 
 def map_gleason_to_grade_group(primary_pattern: int, secondary_pattern: int,
-                                tertiary_pattern: Optional[int] = None) -> Dict[str, Any]:
-    """
-    Map Gleason patterns to ISUP 2014 Grade Group.
+                               tertiary_pattern: Optional[int] = None,
+                               specimen_type: str = "biopsy") -> Dict[str, Any]:
+    """Map a pathologist-assigned Gleason pattern pair to an ISUP Grade Group.
 
-    Parameters
-    ----------
-    primary_pattern : int
-        Primary (most prevalent) Gleason pattern (1-5).
-    secondary_pattern : int
-        Secondary (second most prevalent) Gleason pattern (1-5).
-    tertiary_pattern : int, optional
-        Tertiary (highest) pattern if present. If provided and higher than
-        secondary, the score uses primary + tertiary for grade group.
-
-    Returns
-    -------
-    dict with gleason_score, grade_group, grade_group_label, risk_category,
-    description, prognosis
+    For needle biopsy, a third higher pattern replaces the secondary pattern.
+    For prostatectomy, minor/tertiary patterns are reported separately because
+    their percentage and pathological context are required before regrading.
     """
-    for name, val in [("primary_pattern", primary_pattern),
-                       ("secondary_pattern", secondary_pattern)]:
-        if not isinstance(val, int) or val < 1 or val > 5:
-            raise ValueError(f"{name} must be integer 1-5; got {val}")
+    for name, value in (("primary_pattern", primary_pattern),
+                        ("secondary_pattern", secondary_pattern),
+                        ("tertiary_pattern", tertiary_pattern)):
+        if value is None and name == "tertiary_pattern":
+            continue
+        if type(value) is not int or not 3 <= value <= 5:
+            raise ValueError(f"{name} must be an integer Gleason pattern 3-5; got {value!r}")
+    if specimen_type not in ("biopsy", "prostatectomy"):
+        raise ValueError("specimen_type must be 'biopsy' or 'prostatectomy'")
+
+    effective_secondary = secondary_pattern
+    notes = []
     if tertiary_pattern is not None:
-        if not isinstance(tertiary_pattern, int) or tertiary_pattern < 1 or tertiary_pattern > 5:
-            raise ValueError(f"tertiary_pattern must be integer 1-5; got {tertiary_pattern}")
-
-    gleason_score = primary_pattern + secondary_pattern
-
-    # Grade Group determination based on ISUP 2014
-    if primary_pattern == 3 and secondary_pattern == 3:
-        grade_group = 1
-        label = "Grade Group 1"
-        risk = "Low risk"
-        description = "Gleason 3+3=6. Well-differentiated, individual glands."
-        prognosis = "Excellent. Most indolent form of prostate cancer."
-    elif primary_pattern == 3 and secondary_pattern == 4:
-        grade_group = 2
-        label = "Grade Group 2"
-        risk = "Favorable intermediate risk"
-        description = "Gleason 3+4=7. Predominantly well-differentiated with some cribriform/fused glands."
-        prognosis = "Good. Generally favorable outcome with appropriate treatment."
-    elif primary_pattern == 4 and secondary_pattern == 3:
-        grade_group = 3
-        label = "Grade Group 3"
-        risk = "Unfavorable intermediate risk"
-        description = "Gleason 4+3=7. Predominantly cribriform/fused glands with some well-differentiated."
-        prognosis = "Intermediate. Higher risk of progression than 3+4."
-    elif (primary_pattern == 4 and secondary_pattern == 4) or \
-         (primary_pattern == 3 and secondary_pattern == 5) or \
-         (primary_pattern == 5 and secondary_pattern == 3):
-        grade_group = 4
-        label = "Grade Group 4"
-        risk = "High risk"
-        description = f"Gleason {primary_pattern}+{secondary_pattern}=8. Poorly differentiated."
-        prognosis = "Poor without aggressive treatment. Significant risk of metastasis."
-    elif (primary_pattern + secondary_pattern) >= 9:
-        grade_group = 5
-        label = "Grade Group 5"
-        risk = "Highest risk"
-        description = f"Gleason {primary_pattern}+{secondary_pattern}={gleason_score}. Undifferentiated."
-        prognosis = "Very poor. Highest risk of metastasis and mortality."
-    else:
-        # Handle unusual combinations (e.g., 2+3, 2+2, etc.)
-        if gleason_score <= 6:
-            grade_group = 1
-            label = "Grade Group 1"
-            risk = "Low risk"
-            description = f"Gleason {primary_pattern}+{secondary_pattern}={gleason_score}. Note: patterns 1-2 are rarely assigned in modern practice."
-            prognosis = "Excellent if confirmed."
-        elif gleason_score == 7:
-            grade_group = 2
-            label = "Grade Group 2"
-            risk = "Favorable intermediate risk"
-            description = f"Gleason {primary_pattern}+{secondary_pattern}=7."
-            prognosis = "Good."
-        elif gleason_score == 8:
-            grade_group = 4
-            label = "Grade Group 4"
-            risk = "High risk"
-            description = f"Gleason {primary_pattern}+{secondary_pattern}=8."
-            prognosis = "Poor without aggressive treatment."
+        if specimen_type == "biopsy":
+            if tertiary_pattern > secondary_pattern:
+                effective_secondary = tertiary_pattern
+                notes.append("Needle biopsy: highest additional pattern is incorporated into the score.")
         else:
-            grade_group = 5
-            label = "Grade Group 5"
-            risk = "Highest risk"
-            description = f"Gleason {primary_pattern}+{secondary_pattern}={gleason_score}."
-            prognosis = "Very poor."
+            notes.append("Prostatectomy: minor/tertiary pattern reported separately; "
+                         "percentage and specialist review are needed before any grade adjustment.")
 
+    score = primary_pattern + effective_secondary
+    grades = {
+        (3, 3): 1, (3, 4): 2, (4, 3): 3,
+        (4, 4): 4, (3, 5): 4, (5, 3): 4,
+        (4, 5): 5, (5, 4): 5, (5, 5): 5,
+    }
+    grade = grades[(primary_pattern, effective_secondary)]
+    # Historical compatibility only; clinical risk is NOT determined by grade alone.
+    grade_risk_labels = {
+        1: "Low risk", 2: "Favorable intermediate risk",
+        3: "Unfavorable intermediate risk", 4: "High risk", 5: "Highest risk",
+    }
     result = {
         "primary_pattern": primary_pattern,
         "secondary_pattern": secondary_pattern,
-        "gleason_score": gleason_score,
-        "grade_group": grade_group,
-        "grade_group_label": label,
-        "risk_category": risk,
-        "description": description,
-        "prognosis": prognosis,
+        "gleason_score": score,
+        "grade_group": grade,
+        "grade_group_label": f"Grade Group {grade}",
+        "risk_category": grade_risk_labels[grade],
+        "description": f"Gleason {primary_pattern}+{effective_secondary}={score} (Grade Group {grade}).",
+        "prognosis": "Prognosis requires staging, PSA, disease extent and other clinical findings.",
+        "specimen_type": specimen_type,
+        "effective_secondary_pattern": effective_secondary,
     }
-
     if tertiary_pattern is not None:
         result["tertiary_pattern"] = tertiary_pattern
-        if tertiary_pattern > secondary_pattern:
-            result["note"] = (
-                f"Tertiary pattern {tertiary_pattern} is higher than secondary {secondary_pattern}. "
-                "Consider upgrading risk assessment."
-            )
-
+        result["note"] = " ".join(notes) if notes else "Additional pattern does not increase the score."
     return result
-
 
 # ---------------------------------------------------------------------------
 # NCCN Risk Stratification
 # ---------------------------------------------------------------------------
 
 def nccn_risk_stratification(grade_group: int, psa: float, t_stage: str,
-                              num_positive_cores: Optional[int] = None,
-                              total_cores: Optional[int] = None,
-                              max_percent_per_core: Optional[float] = None) -> Dict[str, Any]:
-    """
-    NCCN risk stratification for prostate cancer.
+                             num_positive_cores: Optional[int] = None,
+                             total_cores: Optional[int] = None,
+                             max_percent_per_core: Optional[float] = None,
+                             psa_density: Optional[float] = None) -> Dict[str, Any]:
+    """Exploratory localized prostate-cancer risk grouping, not a treatment decision.
 
-    Parameters
-    ----------
-    grade_group : int
-        ISUP Grade Group (1-5).
-    psa : float
-        PSA level in ng/mL.
-    t_stage : str
-        Clinical T stage (e.g., 'T1c', 'T2a', 'T2b', 'T2c', 'T3a', 'T3b', 'T4').
-    num_positive_cores : int, optional
-        Number of biopsy cores positive for cancer.
-    total_cores : int, optional
-        Total number of cores taken.
-    max_percent_per_core : float, optional
-        Maximum percentage of cancer in any single core (0-100).
-
-    Returns
-    -------
-    dict with risk_group, risk_category, criteria_met, treatment_options
+    Uses clinical T stage, PSA, Grade Group and (where available) biopsy-core
+    involvement. Missing required subgroup information is flagged rather than
+    being silently assigned a favorable or unfavorable category.
     """
-    if grade_group < 1 or grade_group > 5:
+    if type(grade_group) is not int or not 1 <= grade_group <= 5:
         raise ValueError(f"grade_group must be 1-5; got {grade_group}")
-    if psa < 0:
-        raise ValueError(f"psa must be >= 0; got {psa}")
+    if isinstance(psa, bool) or not isinstance(psa, (int, float)) or not math.isfinite(psa) or psa < 0:
+        raise ValueError(f"psa must be a finite number >= 0; got {psa}")
+    if not isinstance(t_stage, str):
+        raise ValueError("t_stage must be a clinical T-stage string")
+    t = t_stage.strip().upper()
+    if t.startswith("C"):
+        t = t[1:]
+    stages = {"T1A", "T1B", "T1C", "T2A", "T2B", "T2C", "T3A", "T3B", "T4"}
+    if t not in stages:
+        raise ValueError(f"unsupported clinical t_stage: {t_stage!r}")
+    if (num_positive_cores is None) != (total_cores is None):
+        raise ValueError("num_positive_cores and total_cores must be supplied together")
+    if total_cores is not None:
+        if (type(total_cores) is not int or type(num_positive_cores) is not int
+                or total_cores <= 0 or not 0 <= num_positive_cores <= total_cores):
+            raise ValueError("biopsy core counts must be integers with 0 <= positive <= total and total > 0")
+    for name, value in (("max_percent_per_core", max_percent_per_core),
+                        ("psa_density", psa_density)):
+        if value is not None and (isinstance(value, bool) or
+                                  not isinstance(value, (int, float)) or
+                                  not math.isfinite(value) or value < 0 or
+                                  (name == "max_percent_per_core" and value > 100)):
+            raise ValueError(f"{name} must be a finite, nonnegative number in its valid range")
 
-    t = t_stage.upper().strip()
+    criteria = [f"Clinical T stage: {t}", f"Grade Group: {grade_group}",
+                f"PSA: {psa} ng/mL"]
+    high_stage = t in {"T3A", "T3B", "T4"}
+    high_grade = grade_group >= 4
+    high_psa = psa > 20
+    # Distinct very-high-risk features in the contemporary multi-feature schema.
+    very_high_count = int(high_stage) + int(high_grade) + int(psa > 40)
+    intermediate_factors = (int(t in {"T2B", "T2C"}) +
+                            int(grade_group in (2, 3)) +
+                            int(10 <= psa <= 20))
+    core_fraction = (num_positive_cores / total_cores) if total_cores is not None else None
 
-    # Determine risk group - check from HIGHEST risk down to LOWEST
-    # so that the most severe classification takes priority
-    risk_group = None
-    criteria = []
-
-    # Very High Risk (check first - highest priority)
-    if t in ("T3B", "T4") or (grade_group == 5 and num_positive_cores is not None and num_positive_cores > 4):
-        risk_group = "Very High Risk"
-        criteria = [
-            f"T-stage: {t_stage}",
-            f"Grade Group: {grade_group}",
-            f"PSA: {psa} ng/mL",
-        ]
-
-    # High Risk
-    if risk_group is None:
-        if t == "T3A" or grade_group in (4, 5) or psa > 20:
-            risk_group = "High Risk"
-            criteria = [
-                f"T-stage: {t_stage}",
-                f"Grade Group: {grade_group}",
-                f"PSA: {psa} ng/mL",
-            ]
-
-    # Unfavorable Intermediate Risk
-    if risk_group is None:
-        if grade_group == 3 or (10 <= psa < 20) or t in ("T2B", "T2C"):
-            risk_group = "Unfavorable Intermediate Risk"
-            criteria = [
-                f"T-stage: {t_stage}",
-                f"Grade Group: {grade_group}",
-                f"PSA: {psa} ng/mL",
-            ]
-
-    # Favorable Intermediate Risk
-    if risk_group is None:
-        if (grade_group in (1, 2) and
-            10 <= psa < 20 and
-            t in ("T2B", "T2C")):
-            risk_group = "Favorable Intermediate Risk"
-            criteria = [
-                f"T-stage: {t_stage} (T2b-T2c)",
-                f"Grade Group: {grade_group} (1-2)",
-                f"PSA: {psa} ng/mL (10-20)",
-            ]
-
-    # Very Low Risk (more specific subset of Low Risk - check first)
-    if risk_group is None:
-        if (grade_group == 1 and psa < 10 and
-            t in ("T1C",) and
-            num_positive_cores is not None and num_positive_cores < 3 and
-            max_percent_per_core is not None and max_percent_per_core <= 50):
-            risk_group = "Very Low Risk"
-            criteria = [
-                f"T-stage: {t_stage}",
-                f"Grade Group: {grade_group}",
-                f"PSA: {psa} ng/mL",
-                f"Positive cores: {num_positive_cores} (<3)",
-                f"Max core involvement: {max_percent_per_core}% (<=50%)",
-            ]
-
-    # Low Risk
-    if risk_group is None:
-        if grade_group == 1 and psa < 10 and t in ("T1A", "T1B", "T1C", "T2A"):
-            risk_group = "Low Risk"
-            criteria = [
-                f"T-stage: {t_stage} (T1-T2a)",
-                f"Grade Group: {grade_group}",
-                f"PSA: {psa} ng/mL (<10)",
-            ]
-
-    # Default fallback
-    if risk_group is None:
-        risk_group = "Unfavorable Intermediate Risk"
-        criteria = [
-            f"T-stage: {t_stage}",
-            f"Grade Group: {grade_group}",
-            f"PSA: {psa} ng/mL",
-        ]
-
-    # Treatment options by risk group
-    treatments = _get_treatment_options(risk_group)
-
+    if very_high_count >= 2:
+        group = "Very High Risk"
+    elif high_stage or high_grade or high_psa:
+        group = "High Risk"
+    elif intermediate_factors:
+        if grade_group == 3 or intermediate_factors >= 2 or (
+                core_fraction is not None and core_fraction >= 0.5):
+            group = "Unfavorable Intermediate Risk"
+        elif core_fraction is None:
+            group = "Intermediate Risk (subgroup undetermined)"
+            criteria.append("Biopsy core fraction required to resolve favorable vs unfavorable")
+        else:
+            group = "Favorable Intermediate Risk"
+    elif grade_group == 1 and psa < 10 and t in {"T1A", "T1B", "T1C", "T2A"}:
+        group = "Low Risk"
+        if (t == "T1C" and num_positive_cores is not None and
+                num_positive_cores < 3 and max_percent_per_core is not None and
+                max_percent_per_core <= 50 and psa_density is not None and
+                psa_density < 0.15):
+            group = "Very Low Risk"
+    else:
+        raise ValueError("input combination cannot be assigned a localized risk group")
+    if core_fraction is not None:
+        criteria.append(f"Positive biopsy cores: {num_positive_cores}/{total_cores} ({core_fraction:.1%})")
+    if psa_density is not None:
+        criteria.append(f"PSA density: {psa_density} ng/mL/cm3")
     return {
-        "risk_group": risk_group,
+        "risk_group": group,
         "criteria_met": criteria,
-        "treatment_options": treatments,
+        "treatment_options": _get_treatment_options(group),
+        "note": "Educational risk grouping only; verify current clinical guidance and complete staging.",
     }
+
+
 
 
 def _get_treatment_options(risk_group: str) -> List[str]:
