@@ -131,7 +131,7 @@ def nccn_risk_stratification(grade_group: int, psa: float, t_stage: str,
     high_grade = grade_group >= 4
     high_psa = psa > 20
     # Distinct very-high-risk features in the contemporary multi-feature schema.
-    very_high_count = int(high_stage) + int(high_grade) + int(psa > 40)
+    very_high_count = int(high_stage) + int(high_grade) + int(psa >= 40)
     intermediate_factors = (int(t in {"T2B", "T2C"}) +
                             int(grade_group in (2, 3)) +
                             int(10 <= psa <= 20))
