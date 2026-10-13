@@ -221,57 +221,51 @@ def _get_treatment_options(risk_group: str) -> List[str]:
 # ---------------------------------------------------------------------------
 
 def process_batch(input_csv: str, output_csv: str) -> int:
-    """
-    Process a CSV of prostate cancer cases.
-
-    Expected columns: primary_pattern, secondary_pattern, psa, t_stage
-    Optional: tertiary_pattern, num_positive_cores, total_cores, max_percent_per_core
-    """
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
-
-    out_fields = fieldnames + ["gleason_score", "grade_group", "risk_group",
-                               "treatment_options"]
-    out_rows = []
-
-    for row in rows:
-        primary = int(row.get("primary_pattern", 3))
-        secondary = int(row.get("secondary_pattern", 3))
-        tertiary = row.get("tertiary_pattern")
-        psa = float(row.get("psa", 5.0))
-        t_stage = row.get("t_stage", "T1c")
-        num_pos = row.get("num_positive_cores")
-        total = row.get("total_cores")
-        max_pct = row.get("max_percent_per_core")
-
-        grade_result = map_gleason_to_grade_group(
-            primary, secondary,
-            int(tertiary) if tertiary else None
-        )
-
-        risk_result = nccn_risk_stratification(
-            grade_group=grade_result["grade_group"],
-            psa=psa,
-            t_stage=t_stage,
-            num_positive_cores=int(num_pos) if num_pos else None,
-            total_cores=int(total) if total else None,
-            max_percent_per_core=float(max_pct) if max_pct else None,
-        )
-
-        row_dict = dict(row)
-        row_dict["gleason_score"] = grade_result["gleason_score"]
-        row_dict["grade_group"] = grade_result["grade_group"]
-        row_dict["risk_group"] = risk_result["risk_group"]
-        row_dict["treatment_options"] = "; ".join(risk_result["treatment_options"])
-        out_rows.append(row_dict)
-
-    with open(output_csv, mode="w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
+    """Validate and process a CSV; reject incomplete rows rather than guessing."""
+    import os
+    if os.path.abspath(input_csv) == os.path.abspath(output_csv):
+        raise ValueError("input_csv and output_csv must be different files")
+    required = {"primary_pattern", "secondary_pattern", "psa", "t_stage"}
+    with open(input_csv, newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+        fields = list(reader.fieldnames or [])
+        if len(fields) != len(set(fields)) or not required.issubset(fields):
+            raise ValueError("CSV needs unique headers including: " + ", ".join(sorted(required)))
+        out_rows = []
+        for row_number, row in enumerate(reader, start=2):
+            if None in row or any(not row.get(key, "").strip() for key in required):
+                raise ValueError(f"CSV row {row_number}: malformed or missing required fields")
+            def optional(name, convert):
+                value = row.get(name, "")
+                return convert(value) if value is not None and value.strip() else None
+            try:
+                grade = map_gleason_to_grade_group(
+                    int(row["primary_pattern"]), int(row["secondary_pattern"]),
+                    optional("tertiary_pattern", int),
+                    row.get("specimen_type", "").strip() or "biopsy")
+                risk = nccn_risk_stratification(
+                    grade["grade_group"], float(row["psa"]), row["t_stage"],
+                    optional("num_positive_cores", int),
+                    optional("total_cores", int),
+                    optional("max_percent_per_core", float),
+                    optional("psa_density", float))
+            except (ValueError, TypeError) as exc:
+                raise ValueError(f"CSV row {row_number}: {exc}") from exc
+            result = dict(row)
+            result.update({"gleason_score": grade["gleason_score"],
+                           "grade_group": grade["grade_group"],
+                           "risk_group": risk["risk_group"],
+                           "treatment_options": "; ".join(risk["treatment_options"])})
+            # Prevent spreadsheet formula execution when a CSV is opened in Excel.
+            out_rows.append({key: ("'" + value if isinstance(value, str) and
+                                   value.lstrip().startswith(("=", "+", "-", "@"))
+                                   else value) for key, value in result.items()})
+    out_fields = list(dict.fromkeys(fields +
+                       ["gleason_score", "grade_group", "risk_group", "treatment_options"]))
+    with open(output_csv, "w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=out_fields)
         writer.writeheader()
         writer.writerows(out_rows)
-
     return len(out_rows)
 
 
@@ -292,7 +286,8 @@ def main(argv=None):
     p_grade.add_argument("--secondary", type=int, required=True,
                           help="Secondary Gleason pattern (1-5)")
     p_grade.add_argument("--tertiary", type=int, default=None,
-                          help="Tertiary pattern (optional)")
+                          help="Additional high-grade pattern (optional)")
+    p_grade.add_argument("--specimen-type", choices=["biopsy", "prostatectomy"], default="biopsy")
 
     # Risk stratification
     p_risk = subparsers.add_parser("risk", help="NCCN risk stratification")
@@ -308,6 +303,8 @@ def main(argv=None):
                          help="Total cores taken")
     p_risk.add_argument("--max-percent", type=float, default=None,
                          help="Max % cancer in any core")
+    p_risk.add_argument("--psa-density", type=float, default=None,
+                         help="PSA density (ng/mL/cm3)")
 
     # Full assessment
     p_full = subparsers.add_parser("assess", help="Full grade + risk assessment")
@@ -319,6 +316,8 @@ def main(argv=None):
     p_full.add_argument("--positive-cores", type=int, default=None)
     p_full.add_argument("--total-cores", type=int, default=None)
     p_full.add_argument("--max-percent", type=float, default=None)
+    p_full.add_argument("--psa-density", type=float, default=None)
+    p_full.add_argument("--specimen-type", choices=["biopsy", "prostatectomy"], default="biopsy")
 
     # Batch
     p_batch = subparsers.add_parser("batch", help="Batch process CSV")
@@ -349,7 +348,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "grade":
-        result = map_gleason_to_grade_group(args.primary, args.secondary, args.tertiary)
+        result = map_gleason_to_grade_group(args.primary, args.secondary, args.tertiary, args.specimen_type)
         print(json.dumps(result, indent=2))
 
     elif args.command == "risk":
@@ -360,11 +359,12 @@ def main(argv=None):
             num_positive_cores=args.positive_cores,
             total_cores=args.total_cores,
             max_percent_per_core=args.max_percent,
+            psa_density=args.psa_density,
         )
         print(json.dumps(result, indent=2))
 
     elif args.command == "assess":
-        grade = map_gleason_to_grade_group(args.primary, args.secondary, args.tertiary)
+        grade = map_gleason_to_grade_group(args.primary, args.secondary, args.tertiary, args.specimen_type)
         risk = nccn_risk_stratification(
             grade_group=grade["grade_group"],
             psa=args.psa,
@@ -372,6 +372,7 @@ def main(argv=None):
             num_positive_cores=args.positive_cores,
             total_cores=args.total_cores,
             max_percent_per_core=args.max_percent,
+            psa_density=args.psa_density,
         )
         output = {
             "gleason_score": grade["gleason_score"],
